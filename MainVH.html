@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Volunteer Hours Log</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #0b1220; color: #eaf0ff; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 20px; }
+    .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    .muted { opacity: 0.8; font-size: 13px; }
+    .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; margin-top: 14px; }
+    @media (max-width: 860px){ .grid{ grid-template-columns: 1fr; } }
+    label { display: block; font-size: 13px; opacity: 0.9; margin: 10px 0 6px; }
+    input, select, textarea, button {
+      width: 100%; box-sizing: border-box; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.07);
+      color: #eaf0ff; padding: 10px 12px; outline: none;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    input::placeholder, textarea::placeholder { color: rgba(234,240,255,0.6); }
+    button { cursor: pointer; font-weight: 650; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 1.4fr 0.8fr 1fr; gap: 10px; }
+    @media (max-width: 560px){ .row, .row3{ grid-template-columns: 1fr; } }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .actions button { flex: 1; min-width: 160px; }
+    .primary { background: linear-gradient(135deg, #4f7cff, #9b5cff); border: none; }
+    .secondary { background: rgba(255,255,255,0.10); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.10); font-size: 14px; vertical-align: top; }
+    th { opacity: 0.9; font-size: 13px; }
+    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.14); font-size: 12px; }
+    .topline { display:flex; align-items:flex-start; justify-content:space-between; gap: 10px; }
+    .totalBox { text-align:right; }
+    .big { font-size: 26px; font-weight: 800; margin: 0; }
+    .toast { margin-top: 10px; font-size: 13px; opacity: 0.9; }
+    .modalOverlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      display: none; align-items: center; justify-content: center; padding: 18px; z-index: 50;
+    }
+    .modal {
+      width: min(1100px, 100%); max-height: 88vh; overflow: auto;
+      background: #0c1426; border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 18px; box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+      padding: 16px;
+    }
+    .modalHeader { display:flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .modalHeader h2 { margin: 0; font-size: 16px; }
+    .modalHeader .btnX { width: auto; padding: 8px 10px; border-radius: 10px; }
+    .sectionTitle { margin: 14px 0 6px; font-size: 14px; opacity: 0.95; }
+    .logLine { font-size: 13px; opacity: 0.95; line-height: 1.35; }
+    .logLine .mutedInline { opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="topline">
+        <div>
+          <h1>Volunteer Hours Log</h1>
+          <div class="muted">Log hours by name and keep track of totals.</div>
+        </div>
+        <div class="totalBox">
+          <div class="muted">Selected person total</div>
+          <p class="big" id="selectedTotal">0.0</p>
+          <span class="pill" id="selectedNamePill">No one selected</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- Left: Add / Select -->
+        <div class="card" style="padding:14px;">
+          <div class="row">
+            <div>
+              <label>Choose person</label>
+              <select id="personSelect"></select>
+            </div>
+            <div>
+              <label>Add new person</label>
+              <div class="row" style="grid-template-columns: 1fr auto;">
+                <input id="newPersonName" placeholder="e.g., Aryan" />
+                <button class="secondary" id="addPersonBtn" style="width:auto;">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.10); margin:14px 0;">
+
+          <label>Log hours for selected person</label>
+          <div class="row3">
+            <div>
+              <label style="margin-top:0;">Date</label>
+              <input id="logDate" type="date" />
+            </div>
+            <div>
+              <label style="margin-top:0;">Hours</label>
+              <input id="logHours" type="number" step="0.25" min="0" placeholder="2.5" />
+            </div>
+            <div>
+              <label style="margin-top:0;">Category (optional)</label>
+              <input id="logCategory" placeholder="Tutoring / Food Drive / etc." />
+            </div>
+          </div>
+          <label>Notes (optional)</label>
+          <textarea id="logNote" placeholder="What did you do? Any details?"></textarea>
+
+          <div class="actions">
+            <button class="primary" id="addLogBtn">Add Hours</button>
+            <button class="secondary" id="viewAllBtn">View All Hours</button>
+          </div>
+
+          <div class="toast" id="toast"></div>
+        </div>
+
+        <!-- Right: Leaderboard + Logs -->
+        <div class="card" style="padding:14px;">
+          <h2 style="margin:0 0 6px; font-size:16px;">Leaderboard</h2>
+          <div class="muted">Total hours per person</div>
+          <table id="leaderboardTable">
+            <thead>
+              <tr><th>Name</th><th>Total</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.10); margin:14px 0;">
+
+          <h2 style="margin:0 0 6px; font-size:16px;">Logs for selected person</h2>
+          <div class="muted">Newest first</div>
+          <table id="logsTable">
+            <thead>
+              <tr><th>Date</th><th>Hours</th><th>Details</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modalOverlay" id="modalOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="All volunteer hours">
+      <div class="modalHeader">
+        <div>
+          <h2>All Volunteers — Full List</h2>
+          <div class="muted" id="allSummary"></div>
+        </div>
+        <button class="secondary btnX" id="closeModalBtn">Close</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <input id="searchAll" placeholder="Search a name, category, or notes..." />
+      </div>
+
+      <div id="allContent" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "volunteer_hours_v1";
+
+  function loadData(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { people: {} };
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || !parsed.people) return { people: {} };
+      return parsed;
+    } catch {
+      return { people: {} };
+    }
+  }
+  function saveData(data){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  const el = (id) => document.getElementById(id);
+
+  const personSelect = el("personSelect");
+  const newPersonName = el("newPersonName");
+  const addPersonBtn = el("addPersonBtn");
+
+  const logDate = el("logDate");
+  const logHours = el("logHours");
+  const logCategory = el("logCategory");
+  const logNote = el("logNote");
+  const addLogBtn = el("addLogBtn");
+
+  const selectedTotal = el("selectedTotal");
+  const selectedNamePill = el("selectedNamePill");
+
+  const leaderboardBody = el("leaderboardTable").querySelector("tbody");
+  const logsBody = el("logsTable").querySelector("tbody");
+
+  const toast = el("toast");
+
+  // Modal
+  const viewAllBtn = el("viewAllBtn");
+  const modalOverlay = el("modalOverlay");
+  const closeModalBtn = el("closeModalBtn");
+  const allContent = el("allContent");
+  const allSummary = el("allSummary");
+  const searchAll = el("searchAll");
+
+  let data = loadData();
+
+  function todayISO(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    setTimeout(() => { if (toast.textContent === msg) toast.textContent = ""; }, 2500);
+  }
+
+  function normalizeName(name){
+    return name.trim().replace(/\s+/g, " ");
+  }
+
+  function getSelectedName(){
+    return personSelect.value || "";
+  }
+
+  function ensurePerson(name){
+    if (!data.people[name]) data.people[name] = { logs: [] };
+  }
+
+  function calcTotal(name){
+    const p = data.people[name];
+    if (!p) return 0;
+    return p.logs.reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, (m) => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
+    }[m]));
+  }
+
+  function cryptoRandomId(){
+    try {
+      const arr = new Uint8Array(8);
+      crypto.getRandomValues(arr);
+      return [...arr].map(b=>b.toString(16).padStart(2,"0")).join("");
+    } catch {
+      return String(Math.random()).slice(2) + String(Date.now());
+    }
+  }
+
+  function renderPeople(){
+    const names = Object.keys(data.people).sort((a,b)=>a.localeCompare(b));
+    personSelect.innerHTML = "";
+    if (names.length === 0){
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "— Add someone —";
+      personSelect.appendChild(opt);
+      selectedNamePill.textContent = "No one selected";
+      selectedTotal.textContent = "0.0";
+      renderLeaderboard();
+      renderLogs();
+      return;
+    }
+    for (const n of names){
+      const opt = document.createElement("option");
+      opt.value = n;
+      opt.textContent = n;
+      personSelect.appendChild(opt);
+    }
+    if (!names.includes(getSelectedName())) personSelect.value = names[0];
+    renderSelectedSummary();
+    renderLeaderboard();
+    renderLogs();
+  }
+
+  function renderSelectedSummary(){
+    const name = getSelectedName();
+    if (!name){
+      selectedNamePill.textContent = "No one selected";
+      selectedTotal.textContent = "0.0";
+      return;
+    }
+    selectedNamePill.textContent = name;
+    selectedTotal.textContent = calcTotal(name).toFixed(1);
+  }
+
+  function renderLeaderboard(){
+    const rows = Object.keys(data.people).map(name => ({
+      name,
+      total: calcTotal(name)
+    })).sort((a,b)=>b.total - a.total || a.name.localeCompare(b.name));
+
+    leaderboardBody.innerHTML = "";
+    if (rows.length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="2" class="muted">No data yet.</td>`;
+      leaderboardBody.appendChild(tr);
+      return;
+    }
+
+    for (const r of rows){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${escapeHtml(r.name)}</td><td>${r.total.toFixed(1)}</td>`;
+      leaderboardBody.appendChild(tr);
+    }
+  }
+
+  function renderLogs(){
+    const name = getSelectedName();
+    logsBody.innerHTML = "";
+    if (!name || !data.people[name]){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="4" class="muted">Select a person to see logs.</td>`;
+      logsBody.appendChild(tr);
+      return;
+    }
+
+    const logs = [...data.people[name].logs].sort((a,b)=>b.createdAt - a.createdAt);
+
+    if (logs.length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="4" class="muted">No logs yet for ${escapeHtml(name)}.</td>`;
+      logsBody.appendChild(tr);
+      return;
+    }
+
+    for (const l of logs){
+      const details = [
+        l.category ? `<span class="pill">${escapeHtml(l.category)}</span>` : "",
+        l.note ? `<span class="muted">${escapeHtml(l.note)}</span>` : ""
+      ].filter(Boolean).join(" ");
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(l.date || "")}</td>
+        <td>${Number(l.hours).toFixed(2)}</td>
+        <td>${details || `<span class="muted">—</span>`}</td>
+        <td><button class="secondary" data-del="${l.id}" style="padding:8px 10px;">Delete</button></td>
+      `;
+      logsBody.appendChild(tr);
+    }
+
+    logsBody.querySelectorAll("button[data-del]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-del");
+        deleteLog(name, id);
+      });
+    });
+  }
+
+  function addPerson(){
+    const name = normalizeName(newPersonName.value);
+    if (!name) return showToast("Type a name first.");
+    if (name.length > 40) return showToast("Name is too long.");
+    ensurePerson(name);
+    saveData(data);
+    newPersonName.value = "";
+    personSelect.value = name;
+    renderPeople();
+    showToast(`Added ${name}.`);
+  }
+
+  function addLog(){
+    const name = getSelectedName();
+    if (!name) return showToast("Add/select a person first.");
+    const dateVal = logDate.value || todayISO();
+    const hoursVal = Number(logHours.value);
+
+    if (!Number.isFinite(hoursVal) || hoursVal <= 0) return showToast("Enter hours greater than 0.");
+    if (hoursVal > 24) return showToast("Hours seems too high for one day.");
+
+    const entry = {
+      id: cryptoRandomId(),
+      date: dateVal,
+      hours: Math.round(hoursVal * 100) / 100,
+      category: normalizeName(logCategory.value || ""),
+      note: (logNote.value || "").trim(),
+      createdAt: Date.now()
+    };
+
+    data.people[name].logs.push(entry);
+    saveData(data);
+
+    logHours.value = "";
+    logCategory.value = "";
+    logNote.value = "";
+    if (!logDate.value) logDate.value = todayISO();
+
+    renderSelectedSummary();
+    renderLeaderboard();
+    renderLogs();
+    showToast("Hours added ✅");
+  }
+
+  function deleteLog(name, id){
+    const p = data.people[name];
+    if (!p) return;
+    const before = p.logs.length;
+    p.logs = p.logs.filter(l => l.id !== id);
+    if (p.logs.length === before) return;
+    saveData(data);
+    renderSelectedSummary();
+    renderLeaderboard();
+    renderLogs();
+    showToast("Deleted log.");
+  }
+
+  // -------- Modal "View All" --------
+  function openModal(){
+    modalOverlay.style.display = "flex";
+    modalOverlay.setAttribute("aria-hidden", "false");
+    searchAll.value = "";
+    renderAllView("");
+    // lock background scroll
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeModal(){
+    modalOverlay.style.display = "none";
+    modalOverlay.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  function renderAllView(filterText){
+    const ft = (filterText || "").trim().toLowerCase();
+
+    const peopleRows = Object.keys(data.people).map(name => {
+      const logs = data.people[name].logs || [];
+      const total = calcTotal(name);
+      return { name, total, logs: [...logs].sort((a,b)=>b.createdAt - a.createdAt) };
+    }).sort((a,b)=>b.total - a.total || a.name.localeCompare(b.name));
+
+    const allTotals = peopleRows.reduce((s, p)=> s + p.total, 0);
+    const allLogsCount = peopleRows.reduce((s, p)=> s + p.logs.length, 0);
+    allSummary.textContent = `${peopleRows.length} volunteers • ${allLogsCount} logs • ${allTotals.toFixed(1)} total hours`;
+
+    if (peopleRows.length === 0){
+      allContent.innerHTML = `<div class="muted">No data yet.</div>`;
+      return;
+    }
+
+    // Build HTML
+    let html = "";
+    for (const p of peopleRows){
+      // filter by person name OR any log text
+      const matchesPerson = p.name.toLowerCase().includes(ft);
+      const filteredLogs = p.logs.filter(l => {
+        if (!ft) return true;
+        const blob = [
+          p.name,
+          l.date || "",
+          String(l.hours ?? ""),
+          l.category || "",
+          l.note || ""
+        ].join(" ").toLowerCase();
+        return blob.includes(ft);
+      });
+
+      if (ft && !matchesPerson && filteredLogs.length === 0) continue;
+
+      html += `
+        <div class="card" style="padding:14px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:baseline;">
+            <div style="font-weight:800; font-size:16px;">${escapeHtml(p.name)}</div>
+            <div class="pill">Total: ${p.total.toFixed(1)} hrs</div>
+          </div>
+
+          <div class="sectionTitle">Logs</div>
+      `;
+
+      if (filteredLogs.length === 0){
+        html += `<div class="muted">No logs match your search.</div>`;
+      } else {
+        html += `<table>
+          <thead><tr><th style="width:120px;">Date</th><th style="width:90px;">Hours</th><th>Category</th><th>Notes</th></tr></thead>
+          <tbody>
+        `;
+        for (const l of filteredLogs){
+          html += `
+            <tr>
+              <td>${escapeHtml(l.date || "")}</td>
+              <td>${Number(l.hours).toFixed(2)}</td>
+              <td>${l.category ? `<span class="pill">${escapeHtml(l.category)}</span>` : `<span class="muted">—</span>`}</td>
+              <td>${l.note ? escapeHtml(l.note) : `<span class="muted">—</span>`}</td>
+            </tr>
+          `;
+        }
+        html += `</tbody></table>`;
+      }
+
+      html += `</div>`;
+    }
+
+    allContent.innerHTML = html || `<div class="muted">No results for "${escapeHtml(filterText)}".</div>`;
+  }
+
+  // Events
+  addPersonBtn.addEventListener("click", addPerson);
+  newPersonName.addEventListener("keydown", (e)=>{ if(e.key==="Enter") addPerson(); });
+
+  personSelect.addEventListener("change", () => {
+    renderSelectedSummary();
+    renderLogs();
+  });
+
+  addLogBtn.addEventListener("click", addLog);
+
+  viewAllBtn.addEventListener("click", openModal);
+  closeModalBtn.addEventListener("click", closeModal);
+
+  modalOverlay.addEventListener("click", (e) => {
+    if (e.target === modalOverlay) closeModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modalOverlay.style.display === "flex") closeModal();
+  });
+
+  searchAll.addEventListener("input", () => {
+    renderAllView(searchAll.value);
+  });
+
+  // Init
+  logDate.value = todayISO();
+  renderPeople();
+})();
+</script>
+</body>
+</html>
